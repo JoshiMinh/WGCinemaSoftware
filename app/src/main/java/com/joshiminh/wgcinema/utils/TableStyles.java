@@ -13,11 +13,18 @@ public class TableStyles {
     private static final Color BACKGROUND_COLOR = new Color(30, 30, 30);
 
     /**
-     * Constructor that applies predefined styles to the given JTable.
+     * Private constructor to prevent instantiation, as this is a utility class.
+     */
+    private TableStyles() {
+        // Private constructor
+    }
+
+    /**
+     * Applies predefined styles to the given JTable.
      *
      * @param table The JTable to style.
      */
-    public TableStyles(JTable table) {
+    public static void applyTableStyles(JTable table) {
         // Enable viewport height filling for the table
         table.setFillsViewportHeight(true);
 

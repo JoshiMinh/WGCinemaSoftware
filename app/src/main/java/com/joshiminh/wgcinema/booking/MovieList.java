@@ -12,13 +12,14 @@ import com.joshiminh.wgcinema.App;
 import com.joshiminh.wgcinema.data.AgeRatingColor;
 import com.joshiminh.wgcinema.data.DAO;
 import com.joshiminh.wgcinema.utils.*;
+import static com.joshiminh.wgcinema.utils.AgentStyles.*; // Import AgentStyles
 
 @SuppressWarnings("deprecation")
 public class MovieList extends JFrame {
-    private static final Color BACKGROUND_COLOR = new Color(24, 26, 32);
-    private static final Color CARD_COLOR = new Color(36, 38, 46);
-    private static final Color BUTTON_COLOR = new Color(0x1DB954);
-    private static final Color TOP_BAR_COLOR = new Color(18, 18, 18);
+    private static final Color BACKGROUND_COLOR = PRIMARY_BACKGROUND; // Use PRIMARY_BACKGROUND
+    private static final Color CARD_COLOR = SECONDARY_BACKGROUND; // Use SECONDARY_BACKGROUND
+    private static final Color BUTTON_COLOR = ACCENT_TEAL; // Use ACCENT_TEAL
+    private static final Color TOP_BAR_COLOR = PRIMARY_BACKGROUND; // Use PRIMARY_BACKGROUND
     private static final Font BASE_FONT = new Font("Segoe UI", Font.PLAIN, 18);
     private static final int CARD_WIDTH = 260;
     private static final int CARD_HEIGHT = 520;
@@ -28,13 +29,16 @@ public class MovieList extends JFrame {
     private final String url;
     private String email;
     private JPanel moviePanel;
+    private JTextField searchField; // New: Search input field
+    private JButton searchButton;   // New: Search button
+    private JButton showAllButton;  // New: Show All button
 
     public MovieList(String url, String email) {
         this.url = url;
         this.email = email;
         initializeFrame();
         setupComponents();
-        loadMovieList();
+        loadInitialMovieList(); // Call initial load
         setVisible(true);
     }
 
@@ -65,24 +69,65 @@ public class MovieList extends JFrame {
         topBar.setBorder(BorderFactory.createEmptyBorder(25, 40, 25, 40));
 
         JButton transactionHistoryButton = new JButton("Transaction History");
-        transactionHistoryButton.setBackground(new Color(44, 62, 80)); // Use a solid dark blue color
-        transactionHistoryButton.setPreferredSize(new Dimension(220, 48)); // Increase width and height
+        transactionHistoryButton.setBackground(ACCENT_BLUE.darker()); // Use ACCENT_BLUE.darker()
+        transactionHistoryButton.setPreferredSize(new Dimension(220, 48));
         transactionHistoryButton.setMinimumSize(new Dimension(220, 48));
         transactionHistoryButton.setMaximumSize(new Dimension(220, 48));
         transactionHistoryButton.setBorderPainted(false);
         transactionHistoryButton.setFocusPainted(false);
-        transactionHistoryButton.setForeground(Color.WHITE);
+        transactionHistoryButton.setForeground(TEXT_COLOR); // Use TEXT_COLOR
         transactionHistoryButton.setFont(BASE_FONT.deriveFont(Font.BOLD, 16f));
         transactionHistoryButton.setHorizontalAlignment(SwingConstants.CENTER);
         transactionHistoryButton.setHorizontalTextPosition(SwingConstants.CENTER);
         transactionHistoryButton.addActionListener(_ -> new TransactionHistory(url, email).setVisible(true));
+        transactionHistoryButton.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                transactionHistoryButton.setBackground(ACCENT_BLUE);
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                transactionHistoryButton.setBackground(ACCENT_BLUE.darker());
+            }
+        });
 
         JLabel logo = new JLabel();
         Image image = ResourceUtil.loadImage("/images/icon.png").getScaledInstance(60, 54, Image.SCALE_SMOOTH);
         logo.setIcon(new ImageIcon(image));
 
+        // New: Search Panel
+        JPanel searchPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 0));
+        searchPanel.setBackground(TOP_BAR_COLOR);
+
+        searchField = new JTextField(30); // Adjust size
+        searchField.setFont(BASE_FONT.deriveFont(Font.PLAIN, 16f));
+        searchField.setForeground(TEXT_COLOR);
+        searchField.setBackground(SECONDARY_BACKGROUND);
+        searchField.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(ACCENT_BLUE, 1),
+            BorderFactory.createEmptyBorder(8, 12, 8, 12)
+        ));
+        searchField.setCaretColor(TEXT_COLOR); // Set caret color
+
+        searchButton = new JButton("Search");
+        AgentStyles.styleButton(searchButton); // Apply consistent style
+        searchButton.addActionListener(e -> performSearch());
+
+        showAllButton = new JButton("Show All");
+        AgentStyles.styleButton(showAllButton);
+        showAllButton.addActionListener(e -> {
+            searchField.setText(""); // Clear search field
+            performSearch(); // Show all movies
+        });
+
+        searchPanel.add(searchField);
+        searchPanel.add(searchButton);
+        searchPanel.add(showAllButton);
+
         topBar.add(transactionHistoryButton, BorderLayout.EAST);
         topBar.add(logo, BorderLayout.WEST);
+        topBar.add(searchPanel, BorderLayout.CENTER); // Add search panel to the center
         return topBar;
     }
 
@@ -97,15 +142,52 @@ public class MovieList extends JFrame {
         return scrollPane;
     }
 
-    private void loadMovieList() {
-        ResultSet resultSet = DAO.fetchUpcomingMovies(url);
-        if (resultSet == null) return;
+    private void loadInitialMovieList() {
+        performSearch(); // Call performSearch with empty query initially to load all movies
+    }
+
+    private void performSearch() {
+        String query = searchField.getText().trim();
+        moviePanel.removeAll(); // Clear existing movie cards
+        moviePanel.revalidate();
+        moviePanel.repaint();
+
+        ResultSet resultSet = null;
+        if (query.isEmpty()) {
+            resultSet = DAO.fetchUpcomingMovies(url);
+        } else {
+            resultSet = DAO.searchMoviesByTitle(url, query);
+        }
+
+        if (resultSet == null) {
+            JLabel errorLabel = new JLabel("Error loading movies or database connection issue.", SwingConstants.CENTER);
+            errorLabel.setForeground(ERROR_COLOR);
+            errorLabel.setFont(BASE_FONT.deriveFont(Font.BOLD, 20f));
+            moviePanel.add(errorLabel, new GridBagConstraints());
+            moviePanel.revalidate();
+            moviePanel.repaint();
+            return;
+        }
 
         try {
-            displayMovies(resultSet);
+            if (!resultSet.isBeforeFirst()) { // Check if ResultSet is empty
+                JLabel noResultsLabel = new JLabel("No movies found matching your search.", SwingConstants.CENTER);
+                noResultsLabel.setForeground(TEXT_COLOR);
+                noResultsLabel.setFont(BASE_FONT.deriveFont(Font.BOLD, 20f));
+                moviePanel.add(noResultsLabel, new GridBagConstraints());
+            } else {
+                displayMovies(resultSet);
+            }
             resultSet.getStatement().getConnection().close();
         } catch (SQLException | java.net.MalformedURLException e) {
             e.printStackTrace();
+            JLabel errorLabel = new JLabel("Error displaying movies: " + e.getMessage(), SwingConstants.CENTER);
+            errorLabel.setForeground(ERROR_COLOR);
+            errorLabel.setFont(BASE_FONT.deriveFont(Font.BOLD, 18f));
+            moviePanel.add(errorLabel, new GridBagConstraints());
+        } finally {
+            moviePanel.revalidate();
+            moviePanel.repaint();
         }
     }
 
@@ -121,7 +203,9 @@ public class MovieList extends JFrame {
                 resultSet.getInt("id"),
                 resultSet.getString("poster"),
                 resultSet.getString("title"),
-                resultSet.getString("age_rating")
+                resultSet.getString("age_rating"),
+                resultSet.getString("director"),
+                resultSet.getInt("duration")
             );
             gbc.gridx = col++;
             moviePanel.add(movie, gbc);
@@ -133,15 +217,37 @@ public class MovieList extends JFrame {
         }
     }
 
-    private JPanel createMovieCard(int movieId, String imageLink, String titleText, String rating) 
+    private JPanel createMovieCard(int movieId, String imageLink, String titleText, String rating, String director, int duration) 
             throws java.net.MalformedURLException {
         JPanel card = new RoundedPanel(CARD_RADIUS, CARD_COLOR);
         card.setLayout(new BorderLayout());
         card.setPreferredSize(new Dimension(CARD_WIDTH, CARD_HEIGHT));
 
         card.add(createPosterLabel(imageLink), BorderLayout.NORTH);
-        card.add(createInfoPanel(titleText, rating), BorderLayout.CENTER);
-        card.add(createBookButton(movieId), BorderLayout.SOUTH);
+        card.add(createInfoPanel(titleText, rating, director, duration), BorderLayout.CENTER);
+        
+        JButton bookButton = createBookButton(movieId);
+        card.add(bookButton, BorderLayout.SOUTH);
+
+        // Add MouseListener to the card to open MovieDetailView, but exclude the bookButton
+        card.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                // Check if the click was not on the bookButton
+                if (e.getSource() == card && e.getComponent() != bookButton && !SwingUtilities.isDescendingFrom(e.getComponent(), bookButton)) {
+                    new MovieDetailView(movieId, url);
+                }
+            }
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                card.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                card.setCursor(Cursor.getDefaultCursor());
+            }
+        });
 
         return card;
     }
@@ -155,27 +261,42 @@ public class MovieList extends JFrame {
         return imageLabel;
     }
 
-    private JPanel createInfoPanel(String titleText, String rating) {
+    private JPanel createInfoPanel(String titleText, String rating, String director, int duration) {
         JPanel infoPanel = new JPanel();
         infoPanel.setLayout(new BoxLayout(infoPanel, BoxLayout.Y_AXIS));
         infoPanel.setBackground(CARD_COLOR);
         infoPanel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         MultiLineLabel titleLabel = createTitleLabel(titleText);
+        JLabel directorLabel = createDetailLabel("Director: " + director);
+        JLabel durationLabel = createDetailLabel("Duration: " + duration + " min");
         JLabel ratingLabel = createRatingLabel(rating);
 
         infoPanel.add(titleLabel);
+        infoPanel.add(Box.createVerticalStrut(4));
+        infoPanel.add(directorLabel);
+        infoPanel.add(durationLabel);
+        infoPanel.add(Box.createVerticalStrut(8));
         infoPanel.add(ratingLabel);
         return infoPanel;
     }
 
     private MultiLineLabel createTitleLabel(String titleText) {
         MultiLineLabel titleLabel = new MultiLineLabel(titleText, BASE_FONT, 2);
-        titleLabel.setForeground(Color.WHITE);
+        titleLabel.setForeground(TEXT_COLOR);
         titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         titleLabel.setBorder(BorderFactory.createEmptyBorder(8, 0, 0, 0));
         titleLabel.setMaximumSize(new Dimension(CARD_WIDTH - 32, Integer.MAX_VALUE));
         return titleLabel;
+    }
+
+    private JLabel createDetailLabel(String text) {
+        JLabel label = new JLabel(text, SwingConstants.CENTER);
+        label.setForeground(LIGHT_TEXT_COLOR);
+        label.setFont(BASE_FONT.deriveFont(Font.PLAIN, 14f));
+        label.setAlignmentX(Component.CENTER_ALIGNMENT);
+        label.setBorder(BorderFactory.createEmptyBorder(2, 0, 2, 0));
+        return label;
     }
 
     private JLabel createRatingLabel(String rating) {
@@ -190,13 +311,24 @@ public class MovieList extends JFrame {
     private JButton createBookButton(int movieId) {
         JButton bookButton = new JButton("Book Ticket");
         bookButton.setFont(BASE_FONT.deriveFont(Font.BOLD, 16f));
-        bookButton.setForeground(Color.WHITE);
+        bookButton.setForeground(TEXT_COLOR);
         bookButton.setBackground(BUTTON_COLOR);
         bookButton.setFocusPainted(false);
         bookButton.setBorder(BorderFactory.createEmptyBorder(10, 0, 10, 0));
         bookButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         bookButton.setAlignmentX(Component.CENTER_ALIGNMENT);
         bookButton.addActionListener(_ -> new Booking(movieId, url).setVisible(true));
+        bookButton.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                bookButton.setBackground(BUTTON_COLOR.brighter());
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                bookButton.setBackground(BUTTON_COLOR);
+            }
+        });
         return bookButton;
     }
 

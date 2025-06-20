@@ -12,27 +12,29 @@ import com.joshiminh.wgcinema.dashboard.agents.MovieSearch;
 import com.joshiminh.wgcinema.data.AgeRatingColor;
 import com.joshiminh.wgcinema.data.DAO;
 import com.joshiminh.wgcinema.utils.*;
+import static com.joshiminh.wgcinema.utils.AgentStyles.*;
 
 @SuppressWarnings("unused")
 public class Movies {
-    private static final Color BACKGROUND_COLOR = new Color(30, 30, 30);
     private String url;
     private JPanel moviesSection;
     private JPanel moviesPanel;
+    private JPanel currentChartPanel;
 
     public Movies(String url) {
         this.url = url;
         this.moviesSection = new JPanel(new BorderLayout());
-        this.moviesSection.setBackground(BACKGROUND_COLOR);
+        this.moviesSection.setBackground(PRIMARY_BACKGROUND);
         this.moviesSection.add(createSearchBarPanel(), BorderLayout.NORTH);
         this.moviesPanel = new JPanel();
         this.moviesPanel.setLayout(new BoxLayout(moviesPanel, BoxLayout.Y_AXIS));
-        this.moviesPanel.setBackground(BACKGROUND_COLOR);
+        this.moviesPanel.setBackground(PRIMARY_BACKGROUND);
         loadMovies();
         JScrollPane scrollPane = new JScrollPane(moviesPanel);
         scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
         scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
         scrollPane.getVerticalScrollBar().setUnitIncrement(16);
+        scrollPane.getViewport().setBackground(PRIMARY_BACKGROUND);
         this.moviesSection.add(scrollPane, BorderLayout.CENTER);
         this.moviesSection.add(createChartPanel(), BorderLayout.SOUTH);
     }
@@ -41,7 +43,6 @@ public class Movies {
         return moviesSection;
     }
 
-    // Loads movies from the database and populates the movies panel
     private void loadMovies() {
         moviesPanel.removeAll();
         try (ResultSet resultSet = DAO.fetchAllMovies(url)) {
@@ -52,69 +53,110 @@ public class Movies {
                         resultSet.getString("age_rating"),
                         resultSet.getString("release_date")
                 ));
+                moviesPanel.add(Box.createRigidArea(new Dimension(0, 10)));
             }
         } catch (SQLException e) {
             JLabel errorLabel = new JLabel("Error loading movies: " + e.getMessage());
-            errorLabel.setForeground(Color.RED);
+            errorLabel.setForeground(DANGER_RED);
             moviesPanel.add(errorLabel);
         }
         moviesPanel.revalidate();
         moviesPanel.repaint();
+        updateChartPanel();
     }
 
-    // Creates a panel for a single movie entry with title, age rating, and release date
     private JPanel createMovieEntryPanel(int id, String title, String ageRating, String releaseDate) {
-        JPanel movieEntryPanel = new JPanel(new BorderLayout());
-        movieEntryPanel.setBackground(BACKGROUND_COLOR);
-        movieEntryPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        JPanel movieEntryPanel = new JPanel(new BorderLayout(10, 0));
+        movieEntryPanel.setBackground(SECONDARY_BACKGROUND);
+        movieEntryPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(BORDER_COLOR, 1, true),
+                BorderFactory.createEmptyBorder(10, 15, 10, 15)
+        ));
+        movieEntryPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 100));
+
         JPanel textPanel = new JPanel();
         textPanel.setLayout(new BoxLayout(textPanel, BoxLayout.Y_AXIS));
-        textPanel.setBackground(BACKGROUND_COLOR);
+        textPanel.setBackground(SECONDARY_BACKGROUND);
+        textPanel.setBorder(BorderFactory.createEmptyBorder(5, 0, 5, 0));
+
         JLabel titleLabel = new JLabel(title);
-        titleLabel.setForeground(Color.WHITE);
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 14));
+        titleLabel.setForeground(TEXT_COLOR);
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 15));
+        titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
         JPanel ageRatingPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
-        ageRatingPanel.setBackground(BACKGROUND_COLOR);
-        JLabel ageRatingLabel = new JLabel("Age Rating: ");
-        ageRatingLabel.setForeground(Color.LIGHT_GRAY);
-        ageRatingLabel.setFont(new Font("Arial", Font.PLAIN, 12));
+        ageRatingPanel.setBackground(SECONDARY_BACKGROUND);
+        ageRatingPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JLabel ageRatingTextLabel = new JLabel("Age Rating: ");
+        ageRatingTextLabel.setForeground(LIGHT_TEXT_COLOR);
+        ageRatingTextLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        ageRatingPanel.add(ageRatingTextLabel);
+
         JLabel ageRatingValueLabel = new JLabel(ageRating);
         ageRatingValueLabel.setForeground(AgeRatingColor.getColorForRating(ageRating));
-        ageRatingValueLabel.setFont(new Font("Arial", Font.BOLD, 12));
-        ageRatingPanel.add(ageRatingLabel);
+        ageRatingValueLabel.setFont(new Font("Segoe UI", Font.BOLD, 12));
         ageRatingPanel.add(ageRatingValueLabel);
-        ageRatingPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
         JLabel releaseDateLabel = new JLabel("Release Date: " + releaseDate);
-        releaseDateLabel.setForeground(Color.LIGHT_GRAY);
-        releaseDateLabel.setFont(new Font("Arial", Font.PLAIN, 12));
+        releaseDateLabel.setForeground(LIGHT_TEXT_COLOR);
+        releaseDateLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
         releaseDateLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
         textPanel.add(titleLabel);
+        textPanel.add(Box.createRigidArea(new Dimension(0, 4)));
         textPanel.add(ageRatingPanel);
+        textPanel.add(Box.createRigidArea(new Dimension(0, 4)));
         textPanel.add(releaseDateLabel);
         movieEntryPanel.add(textPanel, BorderLayout.CENTER);
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        buttonPanel.setBackground(BACKGROUND_COLOR);
+
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        buttonPanel.setBackground(SECONDARY_BACKGROUND);
+
         JButton deleteButton = new JButton("Delete");
-        deleteButton.setBackground(Color.RED);
-        deleteButton.setForeground(Color.WHITE);
+        deleteButton.setBackground(DANGER_RED);
+        deleteButton.setForeground(TEXT_COLOR);
+        deleteButton.setFocusPainted(false);
+        deleteButton.setBorder(BorderFactory.createEmptyBorder(8, 15, 8, 15));
+        deleteButton.setFont(new Font("Segoe UI", Font.BOLD, 12));
         deleteButton.addActionListener(e -> deleteMovie(id));
+        deleteButton.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseEntered(java.awt.event.MouseEvent e) {
+                deleteButton.setBackground(DANGER_RED_BRIGHTER);
+            }
+            public void mouseExited(java.awt.event.MouseEvent e) {
+                deleteButton.setBackground(DANGER_RED);
+            }
+        });
+
         JButton editButton = new JButton("Edit");
-        editButton.setBackground(Color.DARK_GRAY);
-        editButton.setForeground(Color.WHITE);
-        editButton.addActionListener(e -> new MovieAgent(url, id, false).setVisible(true));
-        buttonPanel.add(deleteButton);
+        editButton.setBackground(ACCENT_TEAL);
+        editButton.setForeground(TEXT_COLOR);
+        editButton.setFocusPainted(false);
+        editButton.setBorder(BorderFactory.createEmptyBorder(8, 15, 8, 15));
+        editButton.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        editButton.addActionListener(e -> new MovieAgent(url, id, false, () -> loadMovies()).setVisible(true));
+        editButton.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseEntered(java.awt.event.MouseEvent e) {
+                editButton.setBackground(ACCENT_TEAL.brighter());
+            }
+            public void mouseExited(java.awt.event.MouseEvent e) {
+                editButton.setBackground(ACCENT_TEAL);
+            }
+        });
+
         buttonPanel.add(editButton);
+        buttonPanel.add(deleteButton);
         movieEntryPanel.add(buttonPanel, BorderLayout.EAST);
         return movieEntryPanel;
     }
 
-    // Deletes a movie from the database and refreshes the movie list
     private void deleteMovie(int id) {
         int confirm = JOptionPane.showConfirmDialog(
-            null,
-            "Are you sure you want to delete this movie?",
-            "Confirm Deletion",
-            JOptionPane.YES_NO_OPTION
+                null,
+                "Are you sure you want to delete this movie?",
+                "Confirm Deletion",
+                JOptionPane.YES_NO_OPTION
         );
 
         if (confirm == JOptionPane.YES_OPTION) {
@@ -127,17 +169,43 @@ public class Movies {
         }
     }
 
-    // Creates the search bar panel with a search field and buttons
     private JPanel createSearchBarPanel() {
-        JPanel searchBarPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
-        searchBarPanel.setBackground(BACKGROUND_COLOR);
-        searchBarPanel.setPreferredSize(new Dimension(0, 45));
+        JPanel searchBarPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 0));
+        searchBarPanel.setBackground(SECONDARY_BACKGROUND);
+        searchBarPanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+
         JButton newMovieButton = new JButton("New Movie");
-        newMovieButton.addActionListener(e -> new MovieAgent(url, -1, true).setVisible(true));
+        newMovieButton.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        newMovieButton.setBackground(ACCENT_BLUE);
+        newMovieButton.setForeground(TEXT_COLOR);
+        newMovieButton.setFocusPainted(false);
+        newMovieButton.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
+        newMovieButton.addActionListener(e -> new MovieAgent(url, -1, true, () -> loadMovies()).setVisible(true));
+        newMovieButton.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseEntered(java.awt.event.MouseEvent e) {
+                newMovieButton.setBackground(ACCENT_BLUE.brighter());
+            }
+            public void mouseExited(java.awt.event.MouseEvent e) {
+                newMovieButton.setBackground(ACCENT_BLUE);
+            }
+        });
         searchBarPanel.add(newMovieButton);
-        JTextField searchBar = new JTextField(30);
+
+        JTextField searchBar = new JTextField(25);
+        styleComponent(searchBar);
+        searchBar.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(BORDER_COLOR),
+                BorderFactory.createEmptyBorder(8, 10, 8, 10)
+        ));
+        searchBar.setCaretColor(TEXT_COLOR);
         searchBarPanel.add(searchBar);
+
         JButton searchButton = new JButton("Search");
+        searchButton.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        searchButton.setBackground(ACCENT_TEAL);
+        searchButton.setForeground(TEXT_COLOR);
+        searchButton.setFocusPainted(false);
+        searchButton.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
         searchButton.addActionListener(e -> {
             String query = searchBar.getText().trim();
             if (!query.isEmpty()) {
@@ -146,18 +214,31 @@ public class Movies {
                 JOptionPane.showMessageDialog(null, "Please enter a search query.", "Warning", JOptionPane.WARNING_MESSAGE);
             }
         });
+        searchButton.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseEntered(java.awt.event.MouseEvent e) {
+                searchButton.setBackground(ACCENT_TEAL.brighter());
+            }
+            public void mouseExited(java.awt.event.MouseEvent e) {
+                searchButton.setBackground(ACCENT_TEAL);
+            }
+        });
         searchBar.addActionListener(e -> searchButton.doClick());
         searchBarPanel.add(searchButton);
         return searchBarPanel;
     }
 
-    // Creates the chart panel displaying pie charts for age ratings and languages
     private JPanel createChartPanel() {
-        JPanel chartPanel = new JPanel(new GridLayout(1, 3));
-        Color darkBackground = new Color(30, 30, 30);
-        chartPanel.setBackground(darkBackground);
+        currentChartPanel = new JPanel(new GridLayout(1, 3));
+        currentChartPanel.setBackground(PRIMARY_BACKGROUND);
+        updateChartPanel();
+        return currentChartPanel;
+    }
 
-        // Age Rating Pie Chart
+    private void updateChartPanel() {
+        if (currentChartPanel == null) return;
+
+        currentChartPanel.removeAll();
+
         DefaultPieDataset ageRatingDataset = new DefaultPieDataset();
         try (ResultSet resultSet = DAO.fetchAgeRatingCounts(url)) {
             while (resultSet != null && resultSet.next()) {
@@ -168,27 +249,26 @@ public class Movies {
         }
 
         JFreeChart ageRatingChart = ChartFactory.createPieChart("Movies by Age Rating", ageRatingDataset, true, true, false);
-        ageRatingChart.getTitle().setPaint(Color.WHITE);
+        ageRatingChart.getTitle().setPaint(TEXT_COLOR);
         PiePlot agePlot = (PiePlot) ageRatingChart.getPlot();
-        agePlot.setBackgroundPaint(darkBackground);
-        agePlot.setOutlinePaint(new Color(100, 100, 100));
-        agePlot.setLabelBackgroundPaint(new Color(100, 100, 100));
-        agePlot.setLabelPaint(Color.WHITE);
+        agePlot.setBackgroundPaint(PRIMARY_BACKGROUND);
+        agePlot.setOutlinePaint(BORDER_COLOR);
+        agePlot.setLabelBackgroundPaint(SECONDARY_BACKGROUND);
+        agePlot.setLabelPaint(TEXT_COLOR);
         agePlot.setSectionPaint("PG", AgeRatingColor.getColorForRating("PG"));
         agePlot.setSectionPaint("PG-13", AgeRatingColor.getColorForRating("PG-13"));
         agePlot.setSectionPaint("PG-16", AgeRatingColor.getColorForRating("PG-16"));
         agePlot.setSectionPaint("R", AgeRatingColor.getColorForRating("R"));
-        ageRatingChart.setBackgroundPaint(darkBackground);
+        ageRatingChart.setBackgroundPaint(PRIMARY_BACKGROUND);
 
         ChartPanel ageChartPanel = new ChartPanel(ageRatingChart);
         ageChartPanel.setPreferredSize(new Dimension(300, 300));
-        ageChartPanel.setBackground(darkBackground);
+        ageChartPanel.setBackground(PRIMARY_BACKGROUND);
         ageChartPanel.setMouseWheelEnabled(true);
         ageChartPanel.setDomainZoomable(true);
         ageChartPanel.setRangeZoomable(true);
-        chartPanel.add(ageChartPanel);
+        currentChartPanel.add(ageChartPanel);
 
-        // Language Pie Chart
         DefaultPieDataset languageDataset = new DefaultPieDataset();
         int totalMovies = 0;
         try (ResultSet resultSet = DAO.fetchLanguageCounts(url)) {
@@ -210,25 +290,26 @@ public class Movies {
         }
 
         JFreeChart languageChart = ChartFactory.createPieChart("Movies by Language", languageDataset, true, true, false);
-        languageChart.getTitle().setPaint(Color.WHITE);
+        languageChart.getTitle().setPaint(TEXT_COLOR);
         PiePlot languagePlot = (PiePlot) languageChart.getPlot();
-        languagePlot.setBackgroundPaint(darkBackground);
-        languagePlot.setOutlinePaint(new Color(100, 100, 100));
-        languagePlot.setLabelBackgroundPaint(new Color(100, 100, 100));
-        languagePlot.setLabelPaint(Color.WHITE);
-        languagePlot.setSectionPaint("English", Color.BLUE);
-        languagePlot.setSectionPaint("Vietnamese", Color.GREEN);
-        languagePlot.setSectionPaint("Other", Color.GRAY);
-        languageChart.setBackgroundPaint(darkBackground);
+        languagePlot.setBackgroundPaint(PRIMARY_BACKGROUND);
+        languagePlot.setOutlinePaint(BORDER_COLOR);
+        languagePlot.setLabelBackgroundPaint(SECONDARY_BACKGROUND);
+        languagePlot.setLabelPaint(TEXT_COLOR);
+        languagePlot.setSectionPaint("English", ACCENT_BLUE);
+        languagePlot.setSectionPaint("Vietnamese", ACCENT_TEAL);
+        languagePlot.setSectionPaint("Other", LIGHT_TEXT_COLOR);
+        languageChart.setBackgroundPaint(PRIMARY_BACKGROUND);
 
         ChartPanel languageChartPanel = new ChartPanel(languageChart);
         languageChartPanel.setPreferredSize(new Dimension(300, 300));
-        languageChartPanel.setBackground(darkBackground);
+        languageChartPanel.setBackground(PRIMARY_BACKGROUND);
         languageChartPanel.setMouseWheelEnabled(true);
         languageChartPanel.setDomainZoomable(true);
         languageChartPanel.setRangeZoomable(true);
-        chartPanel.add(languageChartPanel);
+        currentChartPanel.add(languageChartPanel);
 
-        return chartPanel;
+        currentChartPanel.revalidate();
+        currentChartPanel.repaint();
     }
 }

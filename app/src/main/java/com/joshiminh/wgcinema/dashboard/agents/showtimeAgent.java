@@ -21,17 +21,20 @@ public class ShowtimeAgent extends JFrame {
     private String[] showtimeColumns;
     private final String databaseUrl;
     private final List<JComponent> inputComponents;
+    private final Runnable refreshCallback;
 
-    public ShowtimeAgent(String url) {
+    public ShowtimeAgent(String url, Runnable refreshCallback) {
         databaseUrl = url;
         inputComponents = new ArrayList<>();
+        this.refreshCallback = refreshCallback;
+
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
         setIconImage(ResourceUtil.loadAppIcon());
         applyFrameDefaults(this, "Add New Showtime", 700, 700);
         setupFrame();
         setVisible(true);
     }
-    
+
 
     private void setupFrame() {
         add(createHeaderPanel(), BorderLayout.NORTH);
@@ -42,7 +45,7 @@ public class ShowtimeAgent extends JFrame {
     private JPanel createHeaderPanel() {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setBorder(new EmptyBorder(20, 0, 10, 0));
-        panel.setBackground(BACKGROUND_COLOR);
+        panel.setBackground(PRIMARY_BACKGROUND);
         panel.add(createHeaderLabel("Add New Showtime"), BorderLayout.CENTER);
         return panel;
     }
@@ -50,10 +53,10 @@ public class ShowtimeAgent extends JFrame {
     private JPanel createFormPanel() {
         showtimeColumns = getFilteredColumns();
         JPanel container = new JPanel(new GridBagLayout());
-        container.setBackground(BACKGROUND_COLOR);
+        container.setBackground(PRIMARY_BACKGROUND);
         container.setBorder(new EmptyBorder(10, FORM_PADDING, 10, FORM_PADDING));
         JPanel form = new JPanel(new GridBagLayout());
-        form.setBackground(BACKGROUND_COLOR);
+        form.setBackground(PRIMARY_BACKGROUND);
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = LABEL_INSETS;
         gbc.anchor = GridBagConstraints.WEST;
@@ -83,7 +86,7 @@ public class ShowtimeAgent extends JFrame {
 
     private JLabel createFormLabel(String name) {
         JLabel label = new JLabel(name.replace("_", " ") + ":");
-        label.setForeground(Color.WHITE);
+        label.setForeground(TEXT_COLOR);
         label.setFont(LABEL_FONT);
         label.setHorizontalAlignment(SwingConstants.RIGHT);
         return label;
@@ -92,7 +95,7 @@ public class ShowtimeAgent extends JFrame {
     private JPanel createFooterPanel() {
         JPanel panel = new JPanel();
         panel.setBorder(new EmptyBorder(10, 0, 20, 0));
-        panel.setBackground(BACKGROUND_COLOR);
+        panel.setBackground(PRIMARY_BACKGROUND);
         JButton saveButton = new JButton("Add Showtime");
         styleButton(saveButton);
         saveButton.addActionListener(e -> performSaveAction());
@@ -126,6 +129,11 @@ public class ShowtimeAgent extends JFrame {
         if (field.equalsIgnoreCase("showroom_id")) return createShowroomBox();
         if (field.equalsIgnoreCase("movie_id")) return createMovieBox();
         if (field.equalsIgnoreCase("time")) return createTimeBox();
+        if (field.equalsIgnoreCase("regular_price") || field.equalsIgnoreCase("vip_price")) {
+            JTextField priceField = createTextField();
+            priceField.setText("0");
+            return priceField;
+        }
         return createTextField();
     }
 
@@ -150,7 +158,7 @@ public class ShowtimeAgent extends JFrame {
         } catch (SQLException ignored) {}
         styleComponent(box);
         return box;
-    }    
+    }
 
     private JComboBox<String> createMovieBox() {
         JComboBox<String> box = new JComboBox<>();
@@ -161,7 +169,7 @@ public class ShowtimeAgent extends JFrame {
         } catch (SQLException ignored) {}
         styleComponent(box);
         return box;
-    }    
+    }
 
     private JComboBox<String> createTimeBox() {
         JComboBox<String> box = new JComboBox<>();
@@ -180,7 +188,7 @@ public class ShowtimeAgent extends JFrame {
         JTextField field = new JTextField();
         styleComponent(field);
         field.setBorder(componentBorder());
-        field.setCaretColor(Color.WHITE);
+        field.setCaretColor(TEXT_COLOR);
         field.setPreferredSize(new Dimension(0, 30));
         return field;
     }
@@ -193,13 +201,15 @@ public class ShowtimeAgent extends JFrame {
         String[] values = extractValues();
         if (DAO.insertShowtime(databaseUrl, showtimeColumns, values) > 0) {
             showResultDialog("Showtime added successfully!", true);
+            if (refreshCallback != null) {
+                refreshCallback.run();
+            }
             dispose();
-            new ShowtimeAgent(databaseUrl).setVisible(true);
         } else {
             showResultDialog("Failed to add showtime", false);
         }
-    }    
-    
+    }
+
 
     private String[] extractValues() {
         String[] values = new String[inputComponents.size()];
@@ -217,7 +227,7 @@ public class ShowtimeAgent extends JFrame {
 
     private void showResultDialog(String msg, boolean success) {
         JOptionPane.showMessageDialog(this, msg, success ? "Success" : "Warning",
-            success ? JOptionPane.INFORMATION_MESSAGE : JOptionPane.WARNING_MESSAGE);
+                success ? JOptionPane.INFORMATION_MESSAGE : JOptionPane.WARNING_MESSAGE);
     }
 
     private void showErrorDialog(String msg) {

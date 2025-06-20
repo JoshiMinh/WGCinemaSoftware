@@ -11,6 +11,7 @@ import java.text.ParseException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import static com.joshiminh.wgcinema.utils.AgentStyles.*; // Import AgentStyles
 
 public class Register extends JFrame {
     private final JTextField emailField = new JTextField(20);
@@ -30,13 +31,13 @@ public class Register extends JFrame {
         AgentStyles.applyFrameDefaults(this, "Register Account", 600, 600);
 
         JPanel formPanel = new JPanel(new GridBagLayout());
-        formPanel.setBackground(AgentStyles.BACKGROUND_COLOR);
+        formPanel.setBackground(PRIMARY_BACKGROUND); // Use PRIMARY_BACKGROUND
         formPanel.setBorder(BorderFactory.createEmptyBorder(
-                AgentStyles.FORM_PADDING, AgentStyles.FORM_PADDING,
-                AgentStyles.FORM_PADDING, AgentStyles.FORM_PADDING));
+                FORM_PADDING, FORM_PADDING,
+                FORM_PADDING, FORM_PADDING));
 
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = AgentStyles.LABEL_INSETS;
+        gbc.insets = LABEL_INSETS;
         gbc.anchor = GridBagConstraints.WEST;
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.gridx = 0; gbc.gridy = 0;
@@ -46,25 +47,25 @@ public class Register extends JFrame {
         gbc.gridy++; gbc.gridwidth = 1;
 
         JLabel emailLabel = new JLabel("Email:");
-        emailLabel.setForeground(Color.WHITE);
+        emailLabel.setForeground(TEXT_COLOR); // Use TEXT_COLOR
         formPanel.add(emailLabel, gbc);
         gbc.gridx = 1;
-        emailField.setBorder(AgentStyles.componentBorder());
+        emailField.setBorder(componentBorder());
         AgentStyles.styleComponent(emailField);
         formPanel.add(emailField, gbc);
 
         gbc.gridx = 0; gbc.gridy++;
         JLabel nameLabel = new JLabel("Name:");
-        nameLabel.setForeground(Color.WHITE);
+        nameLabel.setForeground(TEXT_COLOR); // Use TEXT_COLOR
         formPanel.add(nameLabel, gbc);
         gbc.gridx = 1;
-        nameField.setBorder(AgentStyles.componentBorder());
+        nameField.setBorder(componentBorder());
         AgentStyles.styleComponent(nameField);
         formPanel.add(nameField, gbc);
 
         gbc.gridx = 0; gbc.gridy++;
         JLabel genderLabel = new JLabel("Gender:");
-        genderLabel.setForeground(Color.WHITE);
+        genderLabel.setForeground(TEXT_COLOR); // Use TEXT_COLOR
         formPanel.add(genderLabel, gbc);
         gbc.gridx = 1;
         AgentStyles.styleComponent(genderBox);
@@ -72,7 +73,7 @@ public class Register extends JFrame {
 
         gbc.gridx = 0; gbc.gridy++;
         JLabel dobLabel = new JLabel("Date of Birth (DD/MM/YYYY):");
-        dobLabel.setForeground(Color.WHITE);
+        dobLabel.setForeground(TEXT_COLOR); // Use TEXT_COLOR
         formPanel.add(dobLabel, gbc);
         gbc.gridx = 1;
         JFormattedTextField tempDobField;
@@ -85,25 +86,25 @@ public class Register extends JFrame {
         }
         dobField = tempDobField;
         dobField.setColumns(20);
-        dobField.setBorder(AgentStyles.componentBorder());
+        dobField.setBorder(componentBorder());
         AgentStyles.styleComponent(dobField);
         formPanel.add(dobField, gbc);
 
         gbc.gridx = 0; gbc.gridy++;
         JLabel passwordLabel = new JLabel("Password:");
-        passwordLabel.setForeground(Color.WHITE);
+        passwordLabel.setForeground(TEXT_COLOR); // Use TEXT_COLOR
         formPanel.add(passwordLabel, gbc);
         gbc.gridx = 1;
-        passwordField.setBorder(AgentStyles.componentBorder());
+        passwordField.setBorder(componentBorder());
         AgentStyles.styleComponent(passwordField);
         formPanel.add(passwordField, gbc);
 
         gbc.gridx = 0; gbc.gridy++;
         JLabel confirmPasswordLabel = new JLabel("Confirm Password:");
-        confirmPasswordLabel.setForeground(Color.WHITE);
+        confirmPasswordLabel.setForeground(TEXT_COLOR); // Use TEXT_COLOR
         formPanel.add(confirmPasswordLabel, gbc);
         gbc.gridx = 1;
-        confirmPasswordField.setBorder(AgentStyles.componentBorder());
+        confirmPasswordField.setBorder(componentBorder());
         AgentStyles.styleComponent(confirmPasswordField);
         formPanel.add(confirmPasswordField, gbc);
 

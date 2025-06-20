@@ -11,6 +11,7 @@ import java.sql.*;
 import java.io.*;
 import java.nio.file.*;
 import java.util.Properties;
+import static com.joshiminh.wgcinema.utils.AgentStyles.*; // Import AgentStyles
 
 @SuppressWarnings("unused")
 public class App extends JFrame {
@@ -30,7 +31,7 @@ public class App extends JFrame {
 
     public App() {
         setTitle("Login");
-        setSize(700, 450);
+        setSize(500, 450); // Giữ chiều ngang 500, chiều cao 450
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setLocationRelativeTo(null);
         setIconImage(ResourceUtil.loadAppIcon());
@@ -46,8 +47,8 @@ public class App extends JFrame {
 
         logoLabel = new JLabel(new ImageIcon(ResourceUtil.loadImage("/images/icon.png").getScaledInstance(70, 65, Image.SCALE_SMOOTH)));
 
-        emailField = new JTextField(36);
-        passwordField = new JPasswordField(36);
+        emailField = new JTextField(18); // Thu hẹp chiều ngang trường email
+        passwordField = new JPasswordField(18); // Thu hẹp chiều ngang trường password
         passwordField.setEchoChar('•');
         passwordField.addKeyListener(new KeyAdapter() {
             public void keyPressed(KeyEvent e) {
@@ -61,15 +62,34 @@ public class App extends JFrame {
         loginButton = new JButton("Login");
         dashboardButton = new JButton("Admin Dashboard");
 
+        // Định nghĩa kích thước cho các nút
+        Dimension smallButtonSize = new Dimension(150, 36); // Kích thước cho Register và Login
+        Dimension largeButtonSize = new Dimension(320, 36); // Kích thước cho Admin Dashboard (150 + 20 + 150)
+
         JButton[] buttons = {registerButton, loginButton, dashboardButton};
         for (JButton btn : buttons) {
-            btn.setForeground(Color.WHITE);
-            btn.setBackground(new Color(30, 30, 30));
+            btn.setForeground(TEXT_COLOR);
+            btn.setBackground(ACCENT_BLUE);
             btn.setFocusPainted(false);
             btn.setFont(new Font("Segoe UI", Font.BOLD, 15));
-            btn.setPreferredSize(new Dimension(150, 36));
             btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+            btn.addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseEntered(MouseEvent e) {
+                    btn.setBackground(ACCENT_BLUE.brighter());
+                }
+
+                @Override
+                public void mouseExited(MouseEvent e) {
+                    btn.setBackground(ACCENT_BLUE);
+                }
+            });
         }
+        // Áp dụng kích thước cụ thể
+        registerButton.setPreferredSize(smallButtonSize);
+        loginButton.setPreferredSize(smallButtonSize);
+        dashboardButton.setPreferredSize(largeButtonSize);
+
 
         registerButton.addActionListener(e -> openRegisterFrame());
         loginButton.addActionListener(e -> performLogin());
@@ -78,7 +98,8 @@ public class App extends JFrame {
         JPanel formPanel = new JPanel(new GridBagLayout()) {
             protected void paintComponent(Graphics g) {
                 super.paintComponent(g);
-                g.setColor(new Color(44, 44, 44, 220));
+                // Use SECONDARY_BACKGROUND with transparency
+                g.setColor(new Color(SECONDARY_BACKGROUND.getRed(), SECONDARY_BACKGROUND.getGreen(), SECONDARY_BACKGROUND.getBlue(), 220));
                 g.fillRoundRect(0, 0, getWidth(), getHeight(), 28, 28);
             }
         };
@@ -91,29 +112,52 @@ public class App extends JFrame {
 
         gbc.gridy++; gbc.gridwidth = 1; gbc.anchor = GridBagConstraints.EAST;
         JLabel emailLabel = new JLabel("Email:");
-        emailLabel.setForeground(Color.WHITE);
+        emailLabel.setForeground(TEXT_COLOR);
         emailLabel.setFont(new Font("Segoe UI", Font.PLAIN, 15));
         formPanel.add(emailLabel, gbc);
 
         gbc.gridx = 1; gbc.anchor = GridBagConstraints.WEST;
+        emailField.setBackground(PRIMARY_BACKGROUND);
+        emailField.setForeground(TEXT_COLOR);
+        emailField.setBorder(componentBorder());
         formPanel.add(emailField, gbc);
 
         gbc.gridy++; gbc.gridx = 0; gbc.anchor = GridBagConstraints.EAST;
         JLabel passwordLabel = new JLabel("Password:");
-        passwordLabel.setForeground(Color.WHITE);
+        passwordLabel.setForeground(TEXT_COLOR);
         passwordLabel.setFont(new Font("Segoe UI", Font.PLAIN, 15));
         formPanel.add(passwordLabel, gbc);
 
         gbc.gridx = 1; gbc.anchor = GridBagConstraints.WEST;
+        passwordField.setBackground(PRIMARY_BACKGROUND);
+        passwordField.setForeground(TEXT_COLOR);
+        passwordField.setBorder(componentBorder());
         formPanel.add(passwordField, gbc);
 
+        // Thay đổi cách sắp xếp nút để phù hợp với hình ảnh
         gbc.gridy++; gbc.gridx = 0; gbc.gridwidth = 2; gbc.anchor = GridBagConstraints.CENTER;
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 0));
-        buttonPanel.setOpaque(false);
-        buttonPanel.add(registerButton);
-        buttonPanel.add(loginButton);
-        buttonPanel.add(dashboardButton);
-        formPanel.add(buttonPanel, gbc);
+        JPanel buttonContainerPanel = new JPanel();
+        buttonContainerPanel.setLayout(new BoxLayout(buttonContainerPanel, BoxLayout.Y_AXIS)); // Xếp chồng theo chiều dọc
+        buttonContainerPanel.setOpaque(false);
+
+        // Hàng 1: Register và Login
+        JPanel topButtonRow = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 0)); // Khoảng cách 20 giữa các nút
+        topButtonRow.setOpaque(false);
+        topButtonRow.add(registerButton);
+        topButtonRow.add(loginButton);
+        topButtonRow.setAlignmentX(Component.CENTER_ALIGNMENT); // Căn giữa hàng nút
+
+        // Hàng 2: Admin Dashboard
+        JPanel bottomButtonRow = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0)); // Căn giữa, không có khoảng cách thêm
+        bottomButtonRow.setOpaque(false);
+        bottomButtonRow.add(dashboardButton);
+        bottomButtonRow.setAlignmentX(Component.CENTER_ALIGNMENT); // Căn giữa hàng nút
+
+        buttonContainerPanel.add(topButtonRow);
+        buttonContainerPanel.add(Box.createRigidArea(new Dimension(0, 10))); // Khoảng cách dọc giữa 2 hàng nút
+        buttonContainerPanel.add(bottomButtonRow);
+
+        formPanel.add(buttonContainerPanel, gbc); // Thêm container chứa các hàng nút vào formPanel
 
         mainPanel.add(formPanel, new GridBagConstraints());
         add(mainPanel, BorderLayout.CENTER);
@@ -127,7 +171,12 @@ public class App extends JFrame {
         try (ResultSet rs = DAO.fetchAccountByEmail(DB_URL, email)) {
             if (rs.next()) {
                 String hash = rs.getString("password_hash");
-                boolean isAdmin = rs.getBoolean("admin");
+                int adminValueFromDb = rs.getInt("admin");
+                boolean isAdmin = adminValueFromDb == 1;
+                
+                System.out.println("Debug: Raw 'admin' value from DB for " + email + ": " + adminValueFromDb);
+                System.out.println("Debug: isAdmin (after comparison) for " + email + ": " + isAdmin);
+
                 if (hash.equals(hashPassword(password))) {
                     saveUserCredentials(email, password);
                     if (dashboardButton.getModel().isArmed() || dashboardButton.hasFocus()) {
@@ -262,6 +311,8 @@ public class App extends JFrame {
         try (InputStream in = new FileInputStream(".env")) {
             props.load(in);
         } catch (IOException e) {
+            System.err.println("Lỗi khi load file .env: " + e.getMessage());
+            e.printStackTrace();
             throw new RuntimeException("Failed to load .env file", e);
         }
         DB_HOST = props.getProperty("DB_HOST");

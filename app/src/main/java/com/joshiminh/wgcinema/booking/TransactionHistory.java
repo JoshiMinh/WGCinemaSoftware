@@ -9,12 +9,15 @@ import java.net.URL;
 import java.sql.*;
 import javax.imageio.ImageIO;
 import javax.swing.*;
+import java.text.NumberFormat; // Import NumberFormat
+import java.util.Locale; // Import Locale
 
 import com.joshiminh.wgcinema.data.DAO;
 import com.joshiminh.wgcinema.utils.ResourceUtil;
+import static com.joshiminh.wgcinema.utils.AgentStyles.*; // Import AgentStyles
 
 public class TransactionHistory extends JFrame {
-    private static final Color BACKGROUND_COLOR = new Color(30, 30, 30);
+    private static final Color BACKGROUND_COLOR = PRIMARY_BACKGROUND; // Use PRIMARY_BACKGROUND
 
     public TransactionHistory(String url, String email) {
         setTitle("Your Ticket History");
@@ -48,12 +51,12 @@ public class TransactionHistory extends JFrame {
                 try (ResultSet movieRs = DAO.fetchMovieDetails(url, movieId)) {
                     if (movieRs != null && movieRs.next()) {
                         panel.add(createTransactionEntryPanel(
-                            movieRs.getString("title"),
-                            movieRs.getString("poster"),
-                            movieRs.getString("age_rating"),
-                            rs.getString("transaction_date"),
-                            rs.getString("amount"),
-                            rs.getString("seats_preserved")
+                                movieRs.getString("title"),
+                                movieRs.getString("poster"),
+                                movieRs.getString("age_rating"),
+                                rs.getString("transaction_date"),
+                                rs.getDouble("amount"), // Lấy amount dưới dạng double
+                                rs.getString("seats_preserved")
                         ));
                         panel.add(Box.createRigidArea(new Dimension(0, 10)));
                     }
@@ -61,37 +64,41 @@ public class TransactionHistory extends JFrame {
             }
             if (!hasRows) {
                 JLabel emptyLabel = new JLabel("No transactions found.");
-                emptyLabel.setForeground(Color.LIGHT_GRAY);
+                emptyLabel.setForeground(LIGHT_TEXT_COLOR); // Use LIGHT_TEXT_COLOR
+                emptyLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+                panel.add(Box.createVerticalGlue());
                 panel.add(emptyLabel);
+                panel.add(Box.createVerticalGlue());
             }
         } catch (SQLException e) {
             JLabel errorLabel = new JLabel("Error loading transactions: " + e.getMessage());
-            errorLabel.setForeground(Color.RED);
+            errorLabel.setForeground(DANGER_RED); // Use DANGER_RED
+            errorLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
             panel.add(errorLabel);
         }
         return panel;
     }
 
-    private JPanel createTransactionEntryPanel(String movieTitle, String posterUrl, String ageRating, String transactionDate, String amount, String seatsPreserved) {
+    private JPanel createTransactionEntryPanel(String movieTitle, String posterUrl, String ageRating, String transactionDate, double amount, String seatsPreserved) {
         JPanel entryPanel = new JPanel(new BorderLayout());
-        entryPanel.setBackground(new Color(40, 40, 40));
+        entryPanel.setBackground(SECONDARY_BACKGROUND); // Use SECONDARY_BACKGROUND
         entryPanel.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createEmptyBorder(5, 5, 5, 5),
-            BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(60, 60, 60), 1, true),
-                BorderFactory.createEmptyBorder(10, 10, 10, 10)
-            )
+                BorderFactory.createEmptyBorder(5, 5, 5, 5),
+                BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(BORDER_COLOR, 1, true), // Use BORDER_COLOR
+                        BorderFactory.createEmptyBorder(10, 10, 10, 10)
+                )
         ));
         entryPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 160));
         entryPanel.add(createPosterPanel(movieTitle, posterUrl, ageRating), BorderLayout.WEST);
-        entryPanel.add(createDetailsPanel(transactionDate, amount, seatsPreserved), BorderLayout.CENTER);
+        entryPanel.add(createDetailsPanel(transactionDate, amount, seatsPreserved), BorderLayout.CENTER); // Truyền amount dưới dạng double
         return entryPanel;
     }
 
     private JPanel createPosterPanel(String movieTitle, String posterUrl, String ageRating) {
         JPanel posterPanel = new JPanel();
         posterPanel.setLayout(new BoxLayout(posterPanel, BoxLayout.Y_AXIS));
-        posterPanel.setBackground(new Color(40, 40, 40));
+        posterPanel.setBackground(SECONDARY_BACKGROUND); // Use SECONDARY_BACKGROUND
 
         JLabel posterLabel = new JLabel();
         posterLabel.setPreferredSize(new Dimension(80, 120));
@@ -104,19 +111,19 @@ public class TransactionHistory extends JFrame {
                 posterLabel.setIcon(new ImageIcon(scaledImg));
             } catch (IOException | URISyntaxException e) {
                 posterLabel.setText("[No Image]");
-                posterLabel.setForeground(Color.LIGHT_GRAY);
+                posterLabel.setForeground(LIGHT_TEXT_COLOR); // Use LIGHT_TEXT_COLOR
             }
         } else {
             posterLabel.setText("[No Image]");
-            posterLabel.setForeground(Color.LIGHT_GRAY);
+            posterLabel.setForeground(LIGHT_TEXT_COLOR); // Use LIGHT_TEXT_COLOR
         }
 
         JLabel titleLabel = new JLabel(movieTitle);
-        titleLabel.setForeground(Color.WHITE);
+        titleLabel.setForeground(TEXT_COLOR); // Use TEXT_COLOR
         titleLabel.setFont(new Font("Arial", Font.BOLD, 14));
 
         JLabel ageRatingLabel = new JLabel("Age Rating: " + ageRating);
-        ageRatingLabel.setForeground(Color.LIGHT_GRAY);
+        ageRatingLabel.setForeground(LIGHT_TEXT_COLOR); // Use LIGHT_TEXT_COLOR
         ageRatingLabel.setFont(new Font("Arial", Font.PLAIN, 12));
 
         posterPanel.add(posterLabel);
@@ -128,21 +135,25 @@ public class TransactionHistory extends JFrame {
         return posterPanel;
     }
 
-    private JPanel createDetailsPanel(String transactionDate, String amount, String seatsPreserved) {
+    private JPanel createDetailsPanel(String transactionDate, double amount, String seatsPreserved) { // Thay đổi kiểu dữ liệu của amount
         JPanel detailsPanel = new JPanel();
         detailsPanel.setLayout(new BoxLayout(detailsPanel, BoxLayout.Y_AXIS));
-        detailsPanel.setBackground(new Color(40, 40, 40));
+        detailsPanel.setBackground(SECONDARY_BACKGROUND); // Use SECONDARY_BACKGROUND
 
         JLabel dateLabel = new JLabel("Date: " + transactionDate);
-        dateLabel.setForeground(Color.LIGHT_GRAY);
+        dateLabel.setForeground(LIGHT_TEXT_COLOR); // Use LIGHT_TEXT_COLOR
         dateLabel.setFont(new Font("Arial", Font.PLAIN, 12));
 
         JLabel seatsLabel = new JLabel("Seats: " + seatsPreserved);
-        seatsLabel.setForeground(Color.LIGHT_GRAY);
+        seatsLabel.setForeground(LIGHT_TEXT_COLOR); // Use LIGHT_TEXT_COLOR
         seatsLabel.setFont(new Font("Arial", Font.PLAIN, 12));
 
-        JLabel amountLabel = new JLabel("Amount: $" + amount);
-        amountLabel.setForeground(new Color(0, 200, 0));
+        // Định dạng amount thành chuỗi tiền tệ Việt Nam
+        NumberFormat currencyFormat = NumberFormat.getCurrencyInstance(new Locale("vi", "VN"));
+        String formattedAmount = currencyFormat.format(amount);
+
+        JLabel amountLabel = new JLabel("Amount: " + formattedAmount);
+        amountLabel.setForeground(ACCENT_TEAL); // Use ACCENT_TEAL
         amountLabel.setFont(new Font("Arial", Font.BOLD, 14));
 
         detailsPanel.add(dateLabel);
