@@ -28,11 +28,11 @@ public class DAO {
 
     public static ResultSet fetchUpcomingMovies(String connectionString) {
         String sql = """
-          SELECT id, poster, title, age_rating, director, duration
-          FROM movies
-          WHERE release_date >= CURDATE()
-          ORDER BY release_date ASC
-          """;
+         SELECT id, poster, title, age_rating, director, duration
+         FROM movies
+         WHERE release_date >= CURDATE()
+         ORDER BY release_date ASC
+         """;
         return select(connectionString, sql);
     }
 
@@ -48,7 +48,7 @@ public class DAO {
 
     public static ResultSet searchMoviesByTitle(String connectionString, String titleQuery) {
         // FIX: Added poster, director, and duration to the SELECT statement
-        String sql = "SELECT * FROM movies WHERE title LIKE ? ORDER BY release_date LIMIT 20";
+        String sql = "SELECT id, poster, title, age_rating, director, duration FROM movies WHERE title LIKE ? ORDER BY release_date LIMIT 20";
         return select(connectionString, sql, "%" + titleQuery + "%");
     }
 
@@ -60,18 +60,72 @@ public class DAO {
 
     // Showtime-related SELECT operations
     public static ResultSet fetchShowtimeDetails(String connectionString, int showtimeId) {
-        // Updated to select regular_price and vip_price
+        // First try with new columns, fall back to old query if columns don't exist
         String sql = "SELECT *, regular_price, vip_price FROM showtimes WHERE showtime_id = ?";
+        try {
+            ResultSet rs = select(connectionString, sql, showtimeId);
+            if (rs != null && rs.next()) {
+                // Check if new columns exist by trying to access them
+                try {
+                    rs.getString("chairs_selecting");
+                    // If we get here, new columns exist, reset cursor and return
+                    rs.beforeFirst();
+                    return rs;
+                } catch (SQLException e) {
+                    // New columns don't exist, use old query
+                    rs.close();
+                }
+            }
+        } catch (SQLException e) {
+            // Fall back to basic query
+        }
+
+        // Return basic query result
         return select(connectionString, sql, showtimeId);
     }
 
+    // NEW: Get all seats currently being selected for a showtime
+    public static String getSelectingSeats(String connectionString, int showtimeId) {
+        String sql = "SELECT selected_seats FROM seat_selections WHERE showtime_id = ?";
+        StringBuilder allSelectingSeats = new StringBuilder();
+
+        try (ResultSet rs = select(connectionString, sql, showtimeId)) {
+            while (rs != null && rs.next()) {
+                String seats = rs.getString("selected_seats");
+                if (seats != null && !seats.trim().isEmpty()) {
+                    if (allSelectingSeats.length() > 0) {
+                        allSelectingSeats.append(" ");
+                    }
+                    allSelectingSeats.append(seats);
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error getting selecting seats: " + e.getMessage());
+        }
+
+        return allSelectingSeats.toString();
+    }
+
+    // REMOVED: cleanupExpiredSelections method is no longer needed for automatic timeout.
+    // public static void cleanupExpiredSelections(String connectionString) {
+    //     String sql = "DELETE FROM seat_selections WHERE selection_timestamp < DATE_SUB(NOW(), INTERVAL 5 MINUTE)";
+    //     try {
+    //         int deleted = update(connectionString, sql);
+    //         if (deleted > 0) {
+    //             System.out.println("Cleaned up " + deleted + " expired seat selections");
+    //         }
+    //     } catch (Exception e) {
+    //         System.err.println("Error cleaning up expired selections: " + e.getMessage());
+    //     }
+    // }
+
     public static ResultSet fetchMovieShowtimes(String connectionString, int movieId, String date) {
         String sql = """
-          SELECT showtime_id, TIME_FORMAT(time, '%H:%i') AS 'Time (HH:mm)'
-          FROM showtimes
-          WHERE movie_id = ? AND date = ?
-          ORDER BY time
-          """;
+         SELECT showtime_id, TIME_FORMAT(time, '%H:%i') AS 'Time (HH:mm)'
+         FROM showtimes
+         WHERE movie_id = ? AND date = ?
+         ORDER BY time
+         """;
         return select(connectionString, sql, movieId, date);
     }
 
@@ -110,10 +164,10 @@ public class DAO {
     public static ResultSet fetchEmployeeTransactions(String connectionString, String employeeEmail) {
         // FIX: Changed query to fetch amount and seats_preserved for each transaction
         String sql = """
-          SELECT amount, seats_preserved
-          FROM transactions
-          WHERE account_email = ?
-          """;
+         SELECT amount, seats_preserved
+         FROM transactions
+         WHERE account_email = ?
+         """;
         return select(connectionString, sql, employeeEmail);
     }
 
@@ -144,14 +198,15 @@ public class DAO {
 
     public static int insertTransaction(String connectionString, int movieId, String totalPrice, String selectedSeats, int showroomId, String accountEmail, int showtimeId) {
         String sql = """
-          INSERT INTO transactions (movie_id, amount, seats_preserved, showroom_id, account_email, showtime_id)
-          VALUES (?, ?, ?, ?, ?, ?)
-          """;
+         INSERT INTO transactions (movie_id, amount, seats_preserved, showroom_id, account_email, showtime_id)
+         VALUES (?, ?, ?, ?, ?, ?)
+         """;
         try {
             // Parse the price string using Vietnamese locale to correctly handle thousands separator
             NumberFormat parser = NumberFormat.getNumberInstance(new Locale("vi", "VN"));
             Number parsedNumber = parser.parse(totalPrice.replace("vnđ", "").trim());
             java.math.BigDecimal amount = new java.math.BigDecimal(parsedNumber.doubleValue());
+            System.out.println("DAO insertTransaction: Amount to insert (BigDecimal): " + amount);
             return update(
                     connectionString,
                     sql,
@@ -179,10 +234,10 @@ public class DAO {
             int showtimeId) throws SQLException {
 
         String sql = """
-      INSERT INTO transactions
-        (movie_id, amount, seats_preserved, showroom_id, account_email, showtime_id)
-      VALUES (?, ?, ?, ?, ?, ?)
-      """;
+     INSERT INTO transactions
+       (movie_id, amount, seats_preserved, showroom_id, account_email, showtime_id)
+     VALUES (?, ?, ?, ?, ?, ?)
+     """;
 
         try (
                 Connection conn = DriverManager.getConnection(connectionString);
@@ -216,6 +271,19 @@ public class DAO {
         }
     }
 
+    // NEW: Insert seat selection (temporary)
+    public static int insertSeatSelection(String connectionString, int showtimeId, String userEmail, String selectedSeats) {
+        // REMOVED: No longer calling cleanupExpiredSelections here
+
+        String sql = """
+         INSERT INTO seat_selections (showtime_id, user_email, selected_seats)
+         VALUES (?, ?, ?)
+         ON DUPLICATE KEY UPDATE 
+         selected_seats = VALUES(selected_seats),
+         selection_timestamp = CURRENT_TIMESTAMP
+         """;
+        return update(connectionString, sql, showtimeId, userEmail, selectedSeats);
+    }
 
     public static int insertMovie(String connectionString, String[] columns, String[] values) {
         String sql = "INSERT INTO movies (" + String.join(", ", columns) + ") VALUES (" +
@@ -241,11 +309,30 @@ public class DAO {
 
     public static int updateShowtimeSeats(String connectionString, int reservedCount, String selectedSeats, int showtimeId) {
         String sql = """
-          UPDATE showtimes
-          SET reserved_chairs = reserved_chairs + ?, chairs_booked = CONCAT(chairs_booked, ?)
-          WHERE showtime_id = ?
-          """;
+         UPDATE showtimes
+         SET reserved_chairs = reserved_chairs + ?, chairs_booked = CONCAT(chairs_booked, ?)
+         WHERE showtime_id = ?
+         """;
         return update(connectionString, sql, reservedCount, " " + selectedSeats, showtimeId);
+    }
+
+    // NEW: Update seat selection for a user
+    public static int updateSeatSelection(String connectionString, int showtimeId, String userEmail, String selectedSeats) {
+        // REMOVED: No longer calling cleanupExpiredSelections here
+
+        // First try to update existing record
+        String updateSql = """
+         UPDATE seat_selections 
+         SET selected_seats = ?, selection_timestamp = CURRENT_TIMESTAMP
+         WHERE showtime_id = ? AND user_email = ?
+         """;
+        int updated = update(connectionString, updateSql, selectedSeats, showtimeId, userEmail);
+
+        // If no record was updated, insert new one
+        if (updated == 0) {
+            return insertSeatSelection(connectionString, showtimeId, userEmail, selectedSeats);
+        }
+        return updated;
     }
 
     public static int updateShowtimeColumn(String connectionString, String columnName, Object value, Object showtimeId) {
@@ -287,36 +374,113 @@ public class DAO {
     // NEW: Update current month sales for an account
     public static int updateAccountCurrentMonthSales(String connectionString, String email, int ticketsAdded, double revenueAdded) {
         String sql = "UPDATE accounts SET total_tickets_sold_current_month = total_tickets_sold_current_month + ?, total_revenue_current_month = total_revenue_current_month + ? WHERE account_email = ?";
+        System.out.println("DAO updateAccountCurrentMonthSales: Adding tickets=" + ticketsAdded + ", revenue=" + revenueAdded + " for " + email);
         return update(connectionString, sql, ticketsAdded, revenueAdded, email);
     }
 
     // NEW: Reset monthly sales and move current month to last month
     public static void resetMonthlySales(String connectionString) {
-        try (Connection conn = DriverManager.getConnection(connectionString);
-             Statement stmt = conn.createStatement()) {
-
+        try (Connection conn = DriverManager.getConnection(connectionString)) {
             LocalDate currentDate = LocalDate.now();
+            LocalDate previousMonthDate = currentDate.minusMonths(1);
 
-            String fetchSql = "SELECT account_email, last_reset_date, total_tickets_sold_current_month, total_revenue_current_month FROM accounts";
-            try (ResultSet rs = stmt.executeQuery(fetchSql)) {
+            // Get start and end of previous month
+            LocalDate prevMonthStart = previousMonthDate.withDayOfMonth(1);
+            LocalDate prevMonthEnd = previousMonthDate.withDayOfMonth(previousMonthDate.lengthOfMonth());
+
+            // Get start and end of current month
+            LocalDate currentMonthStart = currentDate.withDayOfMonth(1);
+            // For current month, we calculate up to the current date, not end of month
+            LocalDate currentMonthCalcEnd = currentDate;
+
+            System.out.println("DAO resetMonthlySales: Current Date: " + currentDate);
+            System.out.println("DAO resetMonthlySales: Previous Month Range: " + prevMonthStart + " to " + prevMonthEnd);
+            System.out.println("DAO resetMonthlySales: Current Month Calculation Range: " + currentMonthStart + " to " + currentMonthCalcEnd);
+
+            String fetchAccountsSql = "SELECT account_email, last_reset_date FROM accounts";
+            try (Statement stmt = conn.createStatement();
+                 ResultSet rs = stmt.executeQuery(fetchAccountsSql)) {
+
                 while (rs.next()) {
                     String email = rs.getString("account_email");
                     java.sql.Date lastResetDateSql = rs.getDate("last_reset_date");
                     LocalDate lastResetDate = lastResetDateSql != null ? lastResetDateSql.toLocalDate() : null;
 
-                    // Check if reset is needed (if last reset was in a previous month or never set)
-                    if (lastResetDate == null || lastResetDate.getMonth() != currentDate.getMonth() || lastResetDate.getYear() != currentDate.getYear()) {
-                        int currentTickets = rs.getInt("total_tickets_sold_current_month");
-                        double currentRevenue = rs.getDouble("total_revenue_current_month");
+                    boolean needsReset = false;
+                    if (lastResetDate == null) {
+                        needsReset = true; // Never reset before
+                        System.out.println("DAO resetMonthlySales: " + email + " needs reset (never reset).");
+                    } else if (lastResetDate.getMonth() != currentDate.getMonth() || lastResetDate.getYear() != currentDate.getYear()) {
+                        needsReset = true; // Month has changed
+                        System.out.println("DAO resetMonthlySales: " + email + " needs reset (month changed from " + lastResetDate.getMonth() + " to " + currentDate.getMonth() + ").");
+                    } else {
+                        System.out.println("DAO resetMonthlySales: " + email + " does NOT need reset (same month).");
+                    }
 
-                        String updateSql = "UPDATE accounts SET total_tickets_sold_last_month = ?, total_revenue_last_month = ?, total_tickets_sold_current_month = 0, total_revenue_current_month = 0, last_reset_date = ? WHERE account_email = ?";
-                        try (PreparedStatement ps = conn.prepareStatement(updateSql)) {
-                            ps.setInt(1, currentTickets);
-                            ps.setDouble(2, currentRevenue);
-                            ps.setDate(3, java.sql.Date.valueOf(currentDate));
-                            ps.setString(4, email);
+                    if (needsReset) {
+                        // Calculate sales for the PREVIOUS month from transactions
+                        int prevMonthTickets = 0;
+                        double prevMonthRevenue = 0.0;
+                        String calculatePrevMonthSalesSql = """
+                         SELECT COUNT(*) AS total_tickets, SUM(amount) AS total_revenue
+                         FROM transactions
+                         WHERE account_email = ?
+                         AND transaction_date >= ? AND transaction_date <= ?
+                         """;
+                        try (PreparedStatement ps = conn.prepareStatement(calculatePrevMonthSalesSql)) {
+                            ps.setString(1, email);
+                            ps.setDate(2, java.sql.Date.valueOf(prevMonthStart));
+                            ps.setDate(3, java.sql.Date.valueOf(prevMonthEnd));
+                            try (ResultSet salesRs = ps.executeQuery()) {
+                                if (salesRs.next()) {
+                                    prevMonthTickets = salesRs.getInt("total_tickets");
+                                    prevMonthRevenue = salesRs.getDouble("total_revenue");
+                                }
+                            }
+                        }
+                        System.out.println("DAO resetMonthlySales: " + email + " - Calculated Previous Month Sales: Tickets=" + prevMonthTickets + ", Revenue=" + prevMonthRevenue);
+
+                        // Calculate sales for the CURRENT month from transactions (up to current date)
+                        int currentMonthTickets = 0;
+                        double currentMonthRevenue = 0.0;
+                        String calculateCurrentMonthSalesSql = """
+                         SELECT COUNT(*) AS total_tickets, SUM(amount) AS total_revenue
+                         FROM transactions
+                         WHERE account_email = ?
+                         AND transaction_date >= ? AND transaction_date <= ?
+                         """;
+                        try (PreparedStatement ps = conn.prepareStatement(calculateCurrentMonthSalesSql)) {
+                            ps.setString(1, email);
+                            ps.setDate(2, java.sql.Date.valueOf(currentMonthStart));
+                            ps.setDate(3, java.sql.Date.valueOf(currentMonthCalcEnd)); // Up to current date
+                            try (ResultSet salesRs = ps.executeQuery()) {
+                                if (salesRs.next()) {
+                                    currentMonthTickets = salesRs.getInt("total_tickets");
+                                    currentMonthRevenue = salesRs.getDouble("total_revenue");
+                                }
+                            }
+                        }
+                        System.out.println("DAO resetMonthlySales: " + email + " - Calculated Current Month Sales: Tickets=" + currentMonthTickets + ", Revenue=" + currentMonthRevenue);
+
+                        // Update the accounts table
+                        String updateAccountSql = """
+                         UPDATE accounts
+                         SET total_tickets_sold_last_month = ?,
+                             total_revenue_last_month = ?,
+                             total_tickets_sold_current_month = ?,
+                             total_revenue_current_month = ?,
+                             last_reset_date = ?
+                         WHERE account_email = ?
+                         """;
+                        try (PreparedStatement ps = conn.prepareStatement(updateAccountSql)) {
+                            ps.setInt(1, prevMonthTickets);
+                            ps.setDouble(2, prevMonthRevenue);
+                            ps.setInt(3, currentMonthTickets); // Set current month sales to recalculated value
+                            ps.setDouble(4, currentMonthRevenue); // Set current month revenue to recalculated value
+                            ps.setDate(5, java.sql.Date.valueOf(currentDate));
+                            ps.setString(6, email);
                             ps.executeUpdate();
-                            System.out.println("Monthly sales reset for " + email);
+                            System.out.println("DAO resetMonthlySales: Updated DB for " + email);
                         }
                     }
                 }
@@ -337,6 +501,24 @@ public class DAO {
         return update(connectionString, sql, primaryKeyValue);
     }
 
+    // NEW: Delete seat selection for a user
+    public static int deleteSeatSelection(String connectionString, int showtimeId, String userEmail) {
+        String sql = "DELETE FROM seat_selections WHERE showtime_id = ? AND user_email = ?";
+        return update(connectionString, sql, showtimeId, userEmail);
+    }
+
+    // REMOVED: deleteExpiredSeatSelections method is no longer needed for automatic timeout.
+    // public static int deleteExpiredSeatSelections(String connectionString) {
+    //     String sql = "DELETE FROM seat_selections WHERE selection_timestamp < DATE_SUB(NOW(), INTERVAL 30 MINUTE)";
+    //     return update(connectionString, sql);
+    // }
+
+    // NEW: Delete all seat selections for a showtime (cleanup)
+    public static int deleteAllSeatSelections(String connectionString, int showtimeId) {
+        String sql = "DELETE FROM seat_selections WHERE showtime_id = ?";
+        return update(connectionString, sql, showtimeId);
+    }
+
     // ==========================
     // Utility Methods
     // ==========================
@@ -348,6 +530,8 @@ public class DAO {
             for (int i = 0; i < params.length; i++) {
                 preparedStatement.setObject(i + 1, params[i]);
             }
+            // System.out.println("DAO Select: SQL = " + sql); // Commented out to reduce log spam
+            // System.out.println("DAO Select: Params = " + java.util.Arrays.toString(params)); // Commented out
             return preparedStatement.executeQuery();
         } catch (SQLException e) {
             System.err.println("DAO Select Error: " + e.getMessage());
@@ -365,8 +549,8 @@ public class DAO {
                 preparedStatement.setObject(i + 1, params[i]);
             }
             int rowsAffected = preparedStatement.executeUpdate();
-            System.out.println("DAO Update/Delete: SQL = " + sql);
-            System.out.println("DAO Update/Delete: Params = " + java.util.Arrays.toString(params));
+            // System.out.println("DAO Update/Delete: SQL = " + sql); // Commented out to reduce log spam
+            // System.out.println("DAO Update/Delete: Params = " + java.util.Arrays.toString(params)); // Commented out
             System.out.println("DAO Update/Delete: Rows Affected = " + rowsAffected);
             return rowsAffected;
         } catch (SQLException e) {

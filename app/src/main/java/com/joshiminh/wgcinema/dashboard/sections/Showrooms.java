@@ -114,7 +114,7 @@ public class Showrooms {
      paddedRenderer.setBorder(new EmptyBorder(0, 12, 0, 0));
      paddedRenderer.setForeground(TEXT_COLOR);
      paddedRenderer.setBackground(SECONDARY_BACKGROUND);
-     
+
      loadTableData(table, showroomsTableModel, url, true);
 
      table.getColumn("Actions").setCellRenderer(new ButtonRenderer());
@@ -137,7 +137,7 @@ public class Showrooms {
          public void mouseClicked(MouseEvent e) {
              int column = table.columnAtPoint(e.getPoint());
              int row = table.rowAtPoint(e.getPoint());
-             if (column == table.getColumnCount() - 1) { 
+             if (column == table.getColumnCount() - 1) {
                  if (table.isCellEditable(row, column)) {
                      table.editCellAt(row, column);
                      Object editorComponent = table.getEditorComponent();
@@ -239,7 +239,7 @@ public class Showrooms {
      plot.getDomainAxis().setTickLabelPaint(TEXT_COLOR);
      plot.getRangeAxis().setLabelPaint(ACCENT_BLUE);
      plot.getRangeAxis().setTickLabelPaint(TEXT_COLOR);
-     
+
      plot.getRenderer().setSeriesPaint(0, ACCENT_TEAL);
  }
 
@@ -248,11 +248,11 @@ public class Showrooms {
  }
 
  private void refreshShowroomsPanel() {
-     loadTableData(showroomsTable, showroomsTableModel, url, false); 
+     loadTableData(showroomsTable, showroomsTableModel, url, false);
 
      DefaultCategoryDataset dataset = (DefaultCategoryDataset) currentChartPanel.getChart().getCategoryPlot().getDataset();
      populateChartDataset(dataset, url);
-     
+
      showroomsPanel.revalidate();
      showroomsPanel.repaint();
  }

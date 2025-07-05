@@ -4,12 +4,13 @@ import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.DefaultTableCellRenderer;
 import java.awt.*;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
 import java.text.NumberFormat;
+import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.Locale;
+import java.util.Map;
 
-import com.joshiminh.wgcinema.data.DAO;
 import static com.joshiminh.wgcinema.utils.AgentStyles.*;
 import com.joshiminh.wgcinema.utils.TableStyles;
 
@@ -18,6 +19,9 @@ public class EmployeeSalesSummary {
     private JPanel salesSummaryPanel;
     private JTable employeeTable;
     private DefaultTableModel tableModel;
+    private String dbUrl = "jdbc:mysql://localhost:8000/cinema_data"; // Cập nhật theo DB_HOST và DB_NAME
+    private String dbUser = "root"; // Cập nhật theo DB_USERNAME
+    private String dbPassword = "123456"; // Cập nhật theo DB_PASSWORD
 
     public EmployeeSalesSummary(String url) {
         this.url = url;
@@ -84,61 +88,99 @@ public class EmployeeSalesSummary {
         int grandTotalLastTickets = 0;
         double grandTotalLastRevenue = 0.0;
 
-        try (ResultSet employeesRs = DAO.fetchEmployeesWithSalesData(url)) {
-            if (employeesRs == null) {
-                JOptionPane.showMessageDialog(salesSummaryPanel, "No employee data found or database error.", "Error", JOptionPane.ERROR_MESSAGE);
+        // Map to store statistics for each email
+        Map<String, int[]> employeeStats = new HashMap<>();
+
+        try (Connection conn = DriverManager.getConnection(dbUrl, dbUser, dbPassword);
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery("SELECT account_email, transaction_date, seats_preserved, amount FROM transactions")) {
+
+            if (rs == null) {
+                JOptionPane.showMessageDialog(salesSummaryPanel, "Không tìm thấy dữ liệu giao dịch hoặc lỗi cơ sở dữ liệu.", "Lỗi", JOptionPane.ERROR_MESSAGE);
                 return;
             }
 
-            boolean foundEmployees = false;
-            while (employeesRs.next()) {
-                foundEmployees = true;
-                String email = employeesRs.getString("account_email");
-                String employeeName = employeesRs.getString("name");
-                int currentMonthTickets = employeesRs.getInt("total_tickets_sold_current_month");
-                double currentMonthRevenue = employeesRs.getDouble("total_revenue_current_month");
-                int lastMonthTickets = employeesRs.getInt("total_tickets_sold_last_month");
-                double lastMonthRevenue = employeesRs.getDouble("total_revenue_last_month");
+            LocalDate currentDate = LocalDate.now(); // 2025-06-24
+            int currentMonth = currentDate.getMonthValue(); // 6
+            int currentYear = currentDate.getYear(); // 2025
+            int lastMonth = currentMonth == 1 ? 12 : currentMonth - 1; // 5
+            int lastYear = currentMonth == 1 ? currentYear - 1 : currentYear;
 
-                tableModel.addRow(new Object[]{
-                        employeeName,
-                        email,
-                        currentMonthTickets,
-                        currencyFormat.format(currentMonthRevenue),
-                        lastMonthTickets,
-                        currencyFormat.format(lastMonthRevenue)
-                });
+            while (rs.next()) {
+                String email = rs.getString("account_email");
+                String transactionDateStr = rs.getString("transaction_date");
+                String seatsStr = rs.getString("seats_preserved");
+                double amount = rs.getDouble("amount");
 
-                // Accumulate grand totals
-                grandTotalCurrentTickets += currentMonthTickets;
-                grandTotalCurrentRevenue += currentMonthRevenue;
-                grandTotalLastTickets += lastMonthTickets;
-                grandTotalLastRevenue += lastMonthRevenue;
+                // Parse transaction date (extract date part, e.g., 2025-05-24)
+                LocalDate transDate = LocalDate.parse(transactionDateStr.split(" ")[0]);
+                int transMonth = transDate.getMonthValue();
+                int transYear = transDate.getYear();
+                boolean isCurrentMonth = transYear == currentYear && transMonth == currentMonth;
+                boolean isLastMonth = transYear == lastYear && transMonth == lastMonth;
+
+                // Count seats
+                int seats = seatsStr != null ? seatsStr.split(",").length : 0;
+
+                employeeStats.computeIfAbsent(email, k -> new int[]{0, 0, 0, 0}); // [currentTickets, currentRevenue, lastTickets, lastRevenue]
+                int[] stats = employeeStats.get(email);
+                if (isCurrentMonth) {
+                    stats[0] += seats;
+                    stats[1] += amount;
+                } else if (isLastMonth) {
+                    stats[2] += seats;
+                    stats[3] += amount;
+                }
             }
 
-            if (!foundEmployees) {
-                JLabel noEmployeesLabel = new JLabel("No employees found.");
+            // Add rows for each employee
+            for (Map.Entry<String, int[]> entry : employeeStats.entrySet()) {
+                String email = entry.getKey();
+                int[] stats = entry.getValue();
+                tableModel.addRow(new Object[]{
+                        getEmployeeName(email), // Get employee name based on email
+                        email,
+                        stats[0], // Current Month Tickets
+                        currencyFormat.format(stats[1]), // Current Month Revenue
+                        stats[2], // Last Month Tickets
+                        currencyFormat.format(stats[3]) // Last Month Revenue
+                });
+
+                grandTotalCurrentTickets += stats[0];
+                grandTotalCurrentRevenue += stats[1];
+                grandTotalLastTickets += stats[2];
+                grandTotalLastRevenue += stats[3];
+            }
+
+            // Add total row
+            if (!employeeStats.isEmpty()) {
+                tableModel.addRow(new Object[]{
+                        "TỔNG",
+                        "",
+                        grandTotalCurrentTickets,
+                        currencyFormat.format(grandTotalCurrentRevenue),
+                        grandTotalLastTickets,
+                        currencyFormat.format(grandTotalLastRevenue)
+                });
+            } else {
+                JLabel noEmployeesLabel = new JLabel("Không tìm thấy nhân viên.");
                 noEmployeesLabel.setForeground(LIGHT_TEXT_COLOR);
                 noEmployeesLabel.setFont(new Font("Segoe UI", Font.ITALIC, 16));
                 noEmployeesLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
                 salesSummaryPanel.add(Box.createVerticalGlue());
                 salesSummaryPanel.add(noEmployeesLabel);
                 salesSummaryPanel.add(Box.createVerticalGlue());
-            } else {
-                // Add the total row at the end
-                tableModel.addRow(new Object[]{
-                        "TOTAL", // Special identifier for the renderer
-                        "", // Empty email for total row
-                        grandTotalCurrentTickets,
-                        currencyFormat.format(grandTotalCurrentRevenue),
-                        grandTotalLastTickets,
-                        currencyFormat.format(grandTotalLastRevenue)
-                });
             }
 
         } catch (SQLException e) {
-            JOptionPane.showMessageDialog(salesSummaryPanel, "Error loading employee data: " + e.getMessage(), "Database Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(salesSummaryPanel, "Lỗi khi tải dữ liệu giao dịch: " + e.getMessage(), "Lỗi Cơ sở dữ liệu", JOptionPane.ERROR_MESSAGE);
             e.printStackTrace();
         }
+    }
+
+    private String getEmployeeName(String email) {
+        // Placeholder logic to get employee name from email
+        return email.split("@")[0]; // Example: nickphuso10505, test
+        // Replace with actual logic to fetch name from database if needed
     }
 }

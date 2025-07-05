@@ -28,6 +28,7 @@ public class Checkout extends JFrame {
     private boolean bookingSuccessful = false;
     private String connectionString;
     private String initialSelectedSeats;
+    private String currentUserEmail;
 
     public Checkout(String connectionString, int showroomID, Time time, int movieId, Date date, String movieTitle, String movieRating, String movieLink, int showtimeID, String selectedSeats, Showrooms showroomsFrame) {
         this.showtimeID = showtimeID;
@@ -36,6 +37,19 @@ public class Checkout extends JFrame {
         this.movieId = movieId;
         this.connectionString = connectionString;
         this.initialSelectedSeats = selectedSeats;
+
+        // Get current user email
+        try {
+            java.nio.file.Path USER_FILE = java.nio.file.Paths.get("user.txt");
+            java.util.List<String> lines = java.nio.file.Files.readAllLines(USER_FILE);
+            if (!lines.isEmpty()) {
+                currentUserEmail = lines.get(0).trim();
+            } else {
+                currentUserEmail = "guest@example.com";
+            }
+        } catch (Exception e) {
+            currentUserEmail = "guest@example.com";
+        }
 
         try (ResultSet rs = DAO.fetchShowtimeDetails(connectionString, showtimeID)) {
             if (rs != null && rs.next()) {
@@ -167,6 +181,10 @@ public class Checkout extends JFrame {
         addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent windowEvent) {
+                if (!bookingSuccessful) {
+                    // If booking was not successful, remove seats from selecting table
+                    DAO.deleteSeatSelection(connectionString, showtimeID, currentUserEmail);
+                }
                 if (bookingSuccessful) {
                     showroomsFrame.dispose();
                     Showrooms newShowroomsFrame = new Showrooms(connectionString, showtimeID);
@@ -220,6 +238,7 @@ public class Checkout extends JFrame {
 
             if (chairsResult != null && chairsResult.next()) {
                 String chairsBooked = chairsResult.getString("chairs_booked");
+                if (chairsBooked == null) chairsBooked = ""; // Ensure it's not null
                 if (checkBooked(chairsBooked, selectedSeatsToBook)) {
                     JOptionPane.showMessageDialog(this, "Some selected seats are already booked!", "Error", JOptionPane.ERROR_MESSAGE);
                     chairsResult.close();
@@ -231,32 +250,38 @@ public class Checkout extends JFrame {
             }
             chairsResult.close();
 
+            // Add seats to booked
             int reservedCount = selectedSeatsToBook.split(", ").length;
             int updatedRows = DAO.updateShowtimeSeats(connectionString, reservedCount, selectedSeatsToBook, showtimeID);
 
             if (updatedRows > 0) {
-                String userEmail = "";
-                java.nio.file.Path USER_FILE = java.nio.file.Paths.get("user.txt");
-                java.util.List<String> lines = java.nio.file.Files.readAllLines(USER_FILE);
-                if (!lines.isEmpty()) userEmail = lines.get(0).trim();
+                // Delete from seat_selections table (successful booking)
+                DAO.deleteSeatSelection(connectionString, showtimeID, currentUserEmail);
+
                 JOptionPane.showMessageDialog(this, "Booking Successful!", "Success", JOptionPane.INFORMATION_MESSAGE);
                 showSuccessImage();
                 bookingSuccessful = true;
 
                 // Parse the price string using Vietnamese locale to correctly handle thousands separator
+                String totalPriceString = calculateTotalPrice(selectedSeatsToBook);
                 NumberFormat parser = NumberFormat.getNumberInstance(new Locale("vi", "VN"));
-                double revenue = parser.parse(calculateTotalPrice(selectedSeatsToBook).replace("vnđ", "").trim()).doubleValue();
+                double revenue = parser.parse(totalPriceString.replace("vnđ", "").trim()).doubleValue();
                 int tickets = selectedSeatsToBook.split(", ").length;
 
-                DAO.insertTransaction(connectionString, movieId, calculateTotalPrice(selectedSeatsToBook), selectedSeatsToBook, showroomID, userEmail, showtimeID);
+                System.out.println("Checkout: Revenue before insert/update: " + revenue + " (from '" + totalPriceString + "')");
+
+                DAO.insertTransaction(connectionString, movieId, totalPriceString, selectedSeatsToBook, showroomID, currentUserEmail, showtimeID);
 
                 // Update current month sales for the user
-                DAO.updateAccountCurrentMonthSales(connectionString, userEmail, tickets, revenue);
+                DAO.updateAccountCurrentMonthSales(connectionString, currentUserEmail, tickets, revenue);
+            } else {
+                JOptionPane.showMessageDialog(this, "Booking failed. Please try again.", "Error", JOptionPane.ERROR_MESSAGE);
             }
         } catch (ParseException e) { // Catch ParseException here
             JOptionPane.showMessageDialog(this, "Error parsing total price: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
             e.printStackTrace();
         } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "An error occurred during booking: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
             e.printStackTrace();
         }
     }
