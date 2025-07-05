@@ -6,8 +6,6 @@ import com.joshiminh.wgcinema.App;
 import com.joshiminh.wgcinema.dashboard.sections.Movies;
 import com.joshiminh.wgcinema.dashboard.sections.Showrooms;
 import com.joshiminh.wgcinema.dashboard.sections.Showtimes;
-import com.joshiminh.wgcinema.dashboard.sections.Employees;
-import com.joshiminh.wgcinema.dashboard.sections.EmployeeSalesSummary; // Import the new EmployeeSalesSummary section
 import com.joshiminh.wgcinema.data.DAO; // Import DAO for resetMonthlySales
 import com.joshiminh.wgcinema.utils.ResourceUtil;
 import static com.joshiminh.wgcinema.utils.AgentStyles.*;
@@ -46,14 +44,10 @@ public class Dashboard extends JFrame {
         Movies moviesSection = new Movies(databaseUrl);
         Showrooms showroomsSection = new Showrooms(databaseUrl);
         Showtimes showtimesSection = new Showtimes(databaseUrl);
-        Employees employeesSection = new Employees(databaseUrl);
-        EmployeeSalesSummary employeeSalesSummarySection = new EmployeeSalesSummary(databaseUrl); // Initialize new EmployeeSalesSummary section
 
         mainContentPanel.add(moviesSection.getMoviesSection(), "Movies");
         mainContentPanel.add(showroomsSection.getShowroomsPanel(), "Showrooms");
         mainContentPanel.add(showtimesSection.getShowtimesPanel(), "Showtimes");
-        mainContentPanel.add(employeesSection.getEmployeesPanel(), "Employees");
-        mainContentPanel.add(employeeSalesSummarySection.getSalesSummaryPanel(), "Employee Sales Summary"); // Add Employee Sales Summary panel
 
         sidebar = createSidebar();
         add(sidebar, BorderLayout.WEST);
@@ -90,11 +84,7 @@ public class Dashboard extends JFrame {
         panel.add(createSidebarButton("Showrooms", "Showrooms"), gbc);
         gbc.gridy++;
         panel.add(createSidebarButton("Showtimes", "Showtimes"), gbc);
-        gbc.gridy++;
-        panel.add(createSidebarButton("Manage Employees", "Employees"), gbc); // Renamed button for clarity
-        gbc.gridy++;
-        panel.add(createSidebarButton("Employee Sales Summary", "Employee Sales Summary"), gbc); // New button for sales summary
-
+        
         gbc.gridy++;
         gbc.weighty = 1.0;
         panel.add(Box.createVerticalGlue(), gbc);
@@ -112,7 +102,7 @@ public class Dashboard extends JFrame {
         button.setHorizontalAlignment(SwingConstants.LEFT);
         button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 
-        button.addActionListener(e -> cardLayout.show(mainContentPanel, panelName));
+        button.addActionListener(_ -> cardLayout.show(mainContentPanel, panelName));
 
         button.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override
@@ -132,7 +122,7 @@ public class Dashboard extends JFrame {
 
         button.putClientProperty("selected", false);
 
-        button.addActionListener(e -> {
+        button.addActionListener(_ -> {
             for (Component comp : sidebar.getComponents()) {
                 if (comp instanceof JButton sb) {
                     sb.putClientProperty("selected", false);

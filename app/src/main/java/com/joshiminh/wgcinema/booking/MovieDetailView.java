@@ -16,7 +16,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 
 public class MovieDetailView extends JFrame {
-
     private final String url;
     private final int movieId;
     private String movieTitle; // To pass to Booking frame
@@ -69,6 +68,7 @@ public class MovieDetailView extends JFrame {
         }
     }
 
+    @SuppressWarnings("deprecation")
     private void displayMovieDetails(String posterUrl, String title, String director, int duration, String ageRating, String description, String trailerUrl) throws java.net.MalformedURLException {
         JPanel mainPanel = new JPanel(new BorderLayout(20, 20));
         mainPanel.setBackground(PRIMARY_BACKGROUND);
@@ -157,7 +157,7 @@ public class MovieDetailView extends JFrame {
                 watchTrailerButton.setBackground(ACCENT_BLUE);
             }
         });
-        watchTrailerButton.addActionListener(e -> {
+        watchTrailerButton.addActionListener(_ -> {
             if (trailerUrl != null && !trailerUrl.isEmpty()) {
                 try {
                     Desktop.getDesktop().browse(new URI(trailerUrl));
@@ -184,7 +184,7 @@ public class MovieDetailView extends JFrame {
                 bookTicketsButton.setBackground(ACCENT_TEAL);
             }
         });
-        bookTicketsButton.addActionListener(e -> {
+        bookTicketsButton.addActionListener(_ -> {
             new Booking(movieId, url).setVisible(true);
             dispose(); // Close the detail view
         });

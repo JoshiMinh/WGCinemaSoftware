@@ -22,6 +22,7 @@ import org.jfree.chart.plot.PlotOrientation;
 import org.jfree.data.category.DefaultCategoryDataset;
 import static com.joshiminh.wgcinema.utils.AgentStyles.*;
 
+@SuppressWarnings("unused")
 public class Showrooms {
  private static final Font TABLE_FONT = new Font("Segoe UI", Font.PLAIN, 15);
  private static final Font BUTTON_FONT = new Font("Segoe UI", Font.BOLD, 13);
@@ -59,7 +60,7 @@ public class Showrooms {
      newButton.setForeground(TEXT_COLOR);
      newButton.setFocusPainted(false);
      newButton.setBorder(BorderFactory.createEmptyBorder(6, 18, 6, 18));
-     newButton.addActionListener(e -> {
+     newButton.addActionListener(_ -> {
          // Truyền callback để làm mới bảng và biểu đồ sau khi thêm thành công
          new ShowroomAgent(url, () -> refreshShowroomsPanel()).setVisible(true);
      });

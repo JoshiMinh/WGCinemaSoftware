@@ -18,6 +18,7 @@ import com.joshiminh.wgcinema.data.DAO;
 import com.joshiminh.wgcinema.utils.ResourceUtil;
 import static com.joshiminh.wgcinema.utils.AgentStyles.*; // Import AgentStyles
 
+@SuppressWarnings("unused")
 public class Showrooms extends JFrame {
     private static final int WIDTH = 1900, HEIGHT = 900, GAP = 3, MAX_SELECTIONS = 8;
     private static final int REFRESH_INTERVAL = 1000; // Refresh every 1 second (reduced from 2 seconds)
@@ -272,6 +273,7 @@ public class Showrooms extends JFrame {
         return panel;
     }
 
+    @SuppressWarnings("deprecation")
     private JPanel createBottomInfoPanel() {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setBackground(SECONDARY_BACKGROUND);
@@ -417,6 +419,7 @@ public class Showrooms extends JFrame {
     }
 
     private static String formatPrice(int price) {
+        @SuppressWarnings("deprecation")
         NumberFormat numberFormat = NumberFormat.getNumberInstance(new Locale("vi", "VN"));
         return numberFormat.format(price) + "vnđ";
     }

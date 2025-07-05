@@ -149,6 +149,7 @@ public class TransactionHistory extends JFrame {
         seatsLabel.setFont(new Font("Arial", Font.PLAIN, 12));
 
         // Định dạng amount thành chuỗi tiền tệ Việt Nam
+        @SuppressWarnings("deprecation")
         NumberFormat currencyFormat = NumberFormat.getCurrencyInstance(new Locale("vi", "VN"));
         String formattedAmount = currencyFormat.format(amount);
 

@@ -15,7 +15,6 @@ import java.util.Locale;
 public class Booking extends JFrame {
     private static final Color BG_COLOR = AgentStyles.PRIMARY_BACKGROUND;
     private static final Color ACCENT_COLOR = AgentStyles.ACCENT_BLUE;
-    private static final Color TEXT_COLOR = AgentStyles.TEXT_COLOR;
     private static final Font BASE_FONT = AgentStyles.LABEL_FONT; // Use AgentStyles font
     private static final Font HEADER_FONT = AgentStyles.TITLE_FONT.deriveFont(Font.BOLD, 28f); // Larger header font
     private static final Font TAB_FONT = BASE_FONT.deriveFont(Font.BOLD, 16f);
@@ -191,7 +190,7 @@ public class Booking extends JFrame {
         btn.setFont(BUTTON_FONT);
         btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         AgentStyles.styleButton(btn); // Use AgentStyles.styleButton for consistent styling
-        btn.addActionListener(e -> SwingUtilities.invokeLater(() -> new Showrooms(connStr, showtimeId)));
+        btn.addActionListener(_ -> SwingUtilities.invokeLater(() -> new Showrooms(connStr, showtimeId)));
         return btn;
     }
 }

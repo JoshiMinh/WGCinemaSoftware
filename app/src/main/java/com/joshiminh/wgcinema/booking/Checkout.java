@@ -17,6 +17,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import static com.joshiminh.wgcinema.utils.AgentStyles.*; // Import AgentStyles
 
+@SuppressWarnings("unused")
 public class Checkout extends JFrame {
     private static final int WIDTH = 400, HEIGHT = 700;
     private int regularSeatPrice;
@@ -82,6 +83,7 @@ public class Checkout extends JFrame {
 
         JLabel moviePosterLabel = new JLabel();
         try {
+            @SuppressWarnings("deprecation")
             URL moviePosterUrl = new URL(movieLink);
             ImageIcon moviePosterIcon = new ImageIcon(moviePosterUrl);
             Image scaledMoviePosterImage = moviePosterIcon.getImage().getScaledInstance(80, 120, Image.SCALE_SMOOTH);
@@ -226,6 +228,7 @@ public class Checkout extends JFrame {
     }
 
     private static String formatPrice(int price) {
+        @SuppressWarnings("deprecation")
         NumberFormat numberFormat = NumberFormat.getNumberInstance(new Locale("vi", "VN"));
         return numberFormat.format(price) + "vnđ";
     }
@@ -264,6 +267,7 @@ public class Checkout extends JFrame {
 
                 // Parse the price string using Vietnamese locale to correctly handle thousands separator
                 String totalPriceString = calculateTotalPrice(selectedSeatsToBook);
+                @SuppressWarnings("deprecation")
                 NumberFormat parser = NumberFormat.getNumberInstance(new Locale("vi", "VN"));
                 double revenue = parser.parse(totalPriceString.replace("vnđ", "").trim()).doubleValue();
                 int tickets = selectedSeatsToBook.split(", ").length;

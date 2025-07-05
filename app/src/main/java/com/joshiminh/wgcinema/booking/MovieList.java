@@ -112,11 +112,11 @@ public class MovieList extends JFrame {
 
         searchButton = new JButton("Search");
         AgentStyles.styleButton(searchButton); // Apply consistent style
-        searchButton.addActionListener(e -> performSearch());
+        searchButton.addActionListener(_ -> performSearch());
 
         showAllButton = new JButton("Show All");
         AgentStyles.styleButton(showAllButton);
-        showAllButton.addActionListener(e -> {
+        showAllButton.addActionListener(_ -> {
             searchField.setText(""); // Clear search field
             performSearch(); // Show all movies
         });
