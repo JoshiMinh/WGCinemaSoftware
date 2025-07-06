@@ -8,7 +8,7 @@ WGCinema Software is a university project developed collaboratively by our group
 
 - This project uses **MySQL** as the database and is built with **Gradle**.
 - Run the project using the command `gradle run`. Refer to the Gradle documentation for more information.
-- All database connections, keys, and values are located in the `.env` file. On the first run, execute `cp app.env.example app.env` and set your keys and values in `.env`.
+- All database connections, keys, and values are located in the `.env` file.
 
 <p align="center">
     <img src="preview.jpg" alt="WGCinema Preview">

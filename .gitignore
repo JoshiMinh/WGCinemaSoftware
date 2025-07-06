@@ -1,19 +1,5 @@
-# Gradle build system
-# Ignore Gradle project-specific cache directory
 .gradle/
-# Ignore Gradle build output directory
 build/
-
-# Environment Configuration
-# Ignore environment configuration files
-app.env
-app\.env
-
-# IDE Settings
-# Ignore IntelliJ IDEA specific files and directories
 .idea/
 *.iml
-
-# Log Files
-# Ignore all log files
 *.log
